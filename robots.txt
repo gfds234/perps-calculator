@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://gfds234.github.io/perps-calculator/sitemap.xml
