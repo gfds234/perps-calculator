@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crypto Perps Calculator — Position Size, Liquidation & Risk</title>
+<meta name="description" content="Free crypto perpetuals calculator. Calculate position size, liquidation price, funding cost, and max loss instantly. Works for Hyperliquid, Binance, Bybit.">
+<meta name="keywords" content="crypto perps calculator, position size calculator, liquidation price calculator, hyperliquid calculator, futures position size">
+<meta property="og:title" content="Crypto Perps Calculator — Free Position Size & Liquidation Tool">
+<meta property="og:description" content="Calculate position size, liquidation price, funding cost and max loss for crypto perpetuals. Free, instant, no signup.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0d;
+    --surface: #141414;
+    --border: #1f1f1f;
+    --border2: #2a2a2a;
+    --text: #e5e5e5;
+    --muted: #6b7280;
+    --accent: #7c6fef;
+    --accent2: #5b50d6;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f97316;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .logo { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
+  .logo span { color: var(--accent); }
+
+  .hero {
+    text-align: center;
+    padding: 52px 24px 36px;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .hero h1 {
+    font-size: clamp(26px, 5vw, 40px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 14px;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 640px) {
+    .main { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .card h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+
+  .field { margin-bottom: 16px; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  input, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 15px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  input[type=range] {
+    padding: 6px 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .range-row input { flex: 1; }
+  .range-val {
+    min-width: 48px;
+    text-align: right;
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 15px;
+  }
+
+  .results { grid-column: 1 / -1; }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .result-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .result-box .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .result-box .val {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .result-box .sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .risk-bar-wrap { margin-top: 4px; }
+  .risk-bar-bg {
+    height: 6px;
+    background: var(--border2);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .risk-bar { height: 100%; border-radius: 99px; transition: width 0.3s, background 0.3s; }
+
+  .warn {
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    display: none;
+    margin-top: 4px;
+  }
+  .warn.show { display: block; }
+  .warn.red { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
+  .warn.orange { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); color: #fdba74; }
+  .warn.green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: #86efac; }
+
+  .upsell {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #12122a 0%, #0d0d1f 100%);
+    border: 1px solid #2a2a70;
+    border-radius: 12px;
+    padding: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .upsell-text h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .upsell-text p {
+    color: var(--muted);
+    font-size: 14px;
+    max-width: 480px;
+  }
+
+  .btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    white-space: nowrap;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .btn:hover { background: var(--accent2); text-decoration: none; }
+
+  .faq {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  .faq h2 {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 24px;
+    letter-spacing: -0.02em;
+  }
+
+  details {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 0;
+  }
+
+  summary {
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+  }
+
+  summary::after { content: '+'; color: var(--accent); font-size: 20px; }
+  details[open] summary::after { content: '−'; }
+
+  details p {
+    color: var(--muted);
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    text-align: center;
+    padding: 28px 24px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Perps<span>Calc</span></div>
+  <a href="https://lampros7.gumroad.com/l/glcsm" target="_blank" style="font-size:13px;color:var(--muted)">50 AI Trading Prompts →</a>
+</header>
+
+<div class="hero">
+  <h1>Crypto Perps Calculator</h1>
+  <p>Position size, liquidation price, funding cost & max loss — instant, free, no signup.</p>
+</div>
+
+<div class="main">
+
+  <!-- INPUT: Trade Setup -->
+  <div class="card">
+    <h2>Trade Setup</h2>
+
+    <div class="field">
+      <label>Direction</label>
+      <select id="direction" onchange="calc()">
+        <option value="long">Long</option>
+        <option value="short">Short</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Account Balance (USDT)</label>
+      <input type="number" id="balance" value="1000" min="1" oninput="calc()">
+    </div>
+
+    <div class="field">
+      <label>Entry Price</label>
+      <input type="number" id="entry" value="100" min="0.0001" step="any" oninput="calc()">
+    </div>
+
+    <div class="field">
+      <label>Leverage: <span id="lev-label">10×</span></label>
+      <div class="range-row">
+        <input type="range" id="leverage" min="1" max="100" value="10" oninput="calc()">
+        <span class="range-val" id="lev-val">10×</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Risk % of Account</label>
+      <div class="range-row">
+        <input type="range" id="risk-pct" min="0.5" max="20" step="0.5" value="2" oninput="calc()">
+        <span class="range-val" id="risk-val">2%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT: Risk Levels -->
+  <div class="card">
+    <h2>Risk Levels</h2>
+
+    <div class="field">
+      <label>Stop Loss Price</label>
+      <input type="number" id="stop" value="97" min="0.0001" step="any" oninput="calc()">
+    </div>
+
+    <div class="field">
+      <label>Take Profit Price</label>
+      <input type="number" id="tp" value="104" min="0.0001" step="any" oninput="calc()">
+    </div>
+
+    <div class="field">
+      <label>Exchange Fee (% per side)</label>
+      <input type="number" id="fee" value="0.05" min="0" max="1" step="0.01" oninput="calc()">
+    </div>
+
+    <div class="field">
+      <label>Funding Rate (% per 8h)</label>
+      <input type="number" id="funding" value="0.01" step="0.001" oninput="calc()">
+    </div>
+
+    <div class="field">
+      <label>Hold Duration (hours)</label>
+      <input type="number" id="hours" value="24" min="1" oninput="calc()">
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results">
+    <div class="result-grid">
+      <div class="result-box">
+        <div class="label">Position Size</div>
+        <div class="val" id="r-size">—</div>
+        <div class="sub" id="r-size-sub"></div>
+      </div>
+      <div class="result-box">
+        <div class="label">Liquidation Price</div>
+        <div class="val" id="r-liq">—</div>
+        <div class="sub" id="r-liq-pct"></div>
+      </div>
+      <div class="result-box">
+        <div class="label">Max Loss (at stop)</div>
+        <div class="val" id="r-loss">—</div>
+        <div class="sub" id="r-loss-pct"></div>
+      </div>
+      <div class="result-box">
+        <div class="label">Max Gain (at TP)</div>
+        <div class="val" id="r-gain">—</div>
+        <div class="sub" id="r-gain-pct"></div>
+      </div>
+      <div class="result-box">
+        <div class="label">Risk / Reward</div>
+        <div class="val" id="r-rr">—</div>
+        <div class="sub">ratio</div>
+      </div>
+      <div class="result-box">
+        <div class="label">Funding Cost</div>
+        <div class="val" id="r-fund">—</div>
+        <div class="sub" id="r-fund-sub"></div>
+      </div>
+      <div class="result-box">
+        <div class="label">Total Fees</div>
+        <div class="val" id="r-fees">—</div>
+        <div class="sub">entry + exit</div>
+      </div>
+      <div class="result-box">
+        <div class="label">Margin Used</div>
+        <div class="val" id="r-margin">—</div>
+        <div class="sub" id="r-margin-pct"></div>
+      </div>
+    </div>
+
+    <div class="risk-bar-wrap">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;">
+        <span>Risk level</span>
+        <span id="risk-label">—</span>
+      </div>
+      <div class="risk-bar-bg">
+        <div class="risk-bar" id="risk-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="warn" id="warn-liq"></div>
+    <div class="warn" id="warn-rr"></div>
+    <div class="warn" id="warn-fund"></div>
+  </div>
+
+  <!-- UPSELL -->
+  <div class="upsell">
+    <div class="upsell-text">
+      <h3>Know your numbers. Now know your signals.</h3>
+      <p>50 structured AI prompts for entry scoring, funding trap detection, stop placement, and post-trade analysis. Fill in the numbers, paste into any AI, get a real answer.</p>
+    </div>
+    <a class="btn" href="https://lampros7.gumroad.com/l/glcsm" target="_blank">Get the Prompt Pack — $7</a>
+  </div>
+
+</div>
+
+<!-- FAQ for SEO -->
+<div class="faq">
+  <h2>How to use this calculator</h2>
+
+  <details>
+    <summary>How is liquidation price calculated?</summary>
+    <p>For a long position: Liquidation Price = Entry × (1 − 1/Leverage + Maintenance Margin). Most exchanges use a maintenance margin of 0.5–1%. This calculator uses 0.5% as default. The actual value depends on your exchange — check their docs for precision.</p>
+  </details>
+
+  <details>
+    <summary>What is funding rate and why does it matter?</summary>
+    <p>Perpetual futures have no expiry, so they use a funding mechanism to keep price close to spot. Every 8 hours, longs pay shorts (or vice versa) a small fee. At 0.1%/8h, holding a $10,000 position for 24 hours costs $30 in funding. High positive funding means longs are crowded — a risk signal.</p>
+  </details>
+
+  <details>
+    <summary>How do I size a position correctly?</summary>
+    <p>The standard formula: Position Size = (Account × Risk%) / Stop Distance%. If your account is $1,000, you risk 2%, and your stop is 3% from entry, your position size is ($1,000 × 0.02) / 0.03 = $667. This calculator does this automatically based on your inputs.</p>
+  </details>
+
+  <details>
+    <summary>What is a good risk/reward ratio for crypto perps?</summary>
+    <p>Most professional traders target at least 1.5:1, with 2:1 or better being ideal. Anything below 1:1 means you need a win rate above 50% just to break even after fees — unsustainable for most strategies.</p>
+  </details>
+
+  <details>
+    <summary>Does this work for Hyperliquid, Binance, Bybit?</summary>
+    <p>Yes. The core calculations (position size, liquidation, R:R) are universal. Fee rates vary by exchange and account tier — adjust the fee field accordingly. Hyperliquid maker/taker fees are currently 0.01%/0.05%.</p>
+  </details>
+</div>
+
+<footer>
+  Free tool. No data stored. No signup. &nbsp;·&nbsp;
+  <a href="https://lampros7.gumroad.com/l/glcsm" target="_blank">50 AI Trading Prompts →</a>
+</footer>
+
+<script>
+function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function el(id) { return document.getElementById(id); }
+function fmt(n, d=2) { return n.toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d}); }
+function fmtUSD(n) { return '$' + fmt(Math.abs(n)); }
+
+function calc() {
+  const dir = el('direction').value;
+  const bal = v('balance');
+  const entry = v('entry');
+  const lev = v('leverage');
+  const riskPct = v('risk-pct') / 100;
+  const stop = v('stop');
+  const tp = v('tp');
+  const fee = v('fee') / 100;
+  const fundRate = v('funding') / 100;
+  const hours = v('hours');
+
+  // update range labels
+  el('lev-val').textContent = lev + '×';
+  el('lev-label').textContent = lev + '×';
+  el('risk-val').textContent = fmt(v('risk-pct'), 1) + '%';
+
+  if (!entry || !bal || !lev) return;
+
+  // Position sizing from risk + stop
+  const stopDist = Math.abs(entry - stop);
+  const stopPct = stopDist / entry;
+  const dollarRisk = bal * riskPct;
+  const positionSize = stopPct > 0 ? dollarRisk / stopPct : bal * lev;
+  const margin = positionSize / lev;
+  const contracts = positionSize / entry;
+
+  // Liquidation (simplified, ~0.5% maintenance margin)
+  const mm = 0.005;
+  const liqPrice = dir === 'long'
+    ? entry * (1 - 1/lev + mm)
+    : entry * (1 + 1/lev - mm);
+
+  const liqDist = Math.abs(entry - liqPrice);
+  const liqPct = liqDist / entry * 100;
+
+  // PnL at stop/tp
+  const sign = dir === 'long' ? 1 : -1;
+  const lossAtStop = (stop - entry) * sign * contracts;
+  const gainAtTp = (tp - entry) * sign * contracts;
+
+  // Fees (entry + exit)
+  const feeTotal = positionSize * fee * 2;
+
+  // Funding cost
+  const periods = hours / 8;
+  const fundCost = positionSize * fundRate * periods;
+
+  // R:R
+  const rr = Math.abs(gainAtTp) / Math.abs(lossAtStop);
+
+  // Display
+  el('r-size').textContent = fmtUSD(positionSize);
+  el('r-size-sub').textContent = fmt(contracts, 4) + ' contracts';
+
+  el('r-liq').textContent = fmtUSD(liqPrice);
+  el('r-liq-pct').textContent = fmt(liqPct, 1) + '% from entry';
+
+  el('r-loss').textContent = '−' + fmtUSD(Math.abs(lossAtStop));
+  el('r-loss-pct').textContent = fmt(Math.abs(lossAtStop) / bal * 100, 1) + '% of account';
+
+  el('r-gain').textContent = '+' + fmtUSD(Math.max(gainAtTp, 0));
+  el('r-gain-pct').textContent = fmt(gainAtTp / bal * 100, 1) + '% of account';
+
+  el('r-rr').textContent = gainAtTp > 0 ? fmt(rr, 2) + ':1' : '—';
+
+  el('r-fund').textContent = fundCost >= 0 ? '−' + fmtUSD(fundCost) : '+' + fmtUSD(Math.abs(fundCost));
+  el('r-fund-sub').textContent = periods + ' periods (' + hours + 'h)';
+
+  el('r-fees').textContent = '−' + fmtUSD(feeTotal);
+
+  el('r-margin').textContent = fmtUSD(margin);
+  el('r-margin-pct').textContent = fmt(margin / bal * 100, 1) + '% of balance';
+
+  // Risk bar
+  const riskScore = Math.min(riskPct / 0.1, 1); // 10% = full bar
+  el('risk-bar').style.width = (riskScore * 100) + '%';
+  let barCol = '#22c55e';
+  let riskText = 'Conservative';
+  if (riskPct > 0.05) { barCol = '#f97316'; riskText = 'Moderate'; }
+  if (riskPct > 0.10) { barCol = '#ef4444'; riskText = 'High'; }
+  el('risk-bar').style.background = barCol;
+  el('risk-label').textContent = riskText + ' (' + fmt(v('risk-pct'), 1) + '%)';
+
+  // Warnings
+  const wLiq = el('warn-liq');
+  if (liqPct < 5) {
+    wLiq.textContent = '⚠ Liquidation is ' + fmt(liqPct, 1) + '% away. A small wick could end your trade.';
+    wLiq.className = 'warn red show';
+  } else if (liqPct < 10) {
+    wLiq.textContent = '⚡ Liquidation is ' + fmt(liqPct, 1) + '% away. Consider reducing leverage.';
+    wLiq.className = 'warn orange show';
+  } else {
+    wLiq.className = 'warn';
+  }
+
+  const wRR = el('warn-rr');
+  if (gainAtTp > 0 && rr < 1) {
+    wRR.textContent = '⚠ R:R is below 1:1. You need a win rate above 50% just to break even.';
+    wRR.className = 'warn red show';
+  } else if (gainAtTp > 0 && rr >= 2) {
+    wRR.textContent = '✓ Solid R:R of ' + fmt(rr, 2) + ':1.';
+    wRR.className = 'warn green show';
+  } else {
+    wRR.className = 'warn';
+  }
+
+  const wFund = el('warn-fund');
+  const fundAnnualized = fundRate * 3 * 365 * 100;
+  if (fundRate > 0.001) {
+    wFund.textContent = '⚡ Funding is ' + fmt(v('funding'), 3) + '%/8h (' + fmt(fundAnnualized, 0) + '% annualized). Longs may be crowded.';
+    wFund.className = 'warn orange show';
+  } else {
+    wFund.className = 'warn';
+  }
+}
+
+calc();
+</script>
+</body>
+</html>
